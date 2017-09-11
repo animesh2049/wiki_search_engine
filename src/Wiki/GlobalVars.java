@@ -1,12 +1,23 @@
 package Wiki;
+import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GlobalVars {
     public static String xmlFileName = "/tmp/test.xml";
     public static String tempFolder = "/tmp/testing";
-    public static String[] mainTags = {"title", "comment", "text", "timestamp", "general_doc"};
+    public static String[] mainTags = {"title", "comment", "text", "general_doc"};
+    public static String stopWordFile = "/home/animesh/IdeaProjects/wiki_search_engine/src/Wiki/StopWords.txt";
     public static int numOfReaderThreads = 1; // All these numbers should be same so there is a redundancy here.
     public static int numOfWriterThreads = 1; // Remove it later.
     public static int numOfParserThreads = 1;
+    public static int numOfMergerThreads = 1;
     public static ConcurrentLinkedQueue< Tuple<Integer, String, String> >[] readerParserBuffer = new ConcurrentLinkedQueue[numOfReaderThreads];
+    public static ConcurrentLinkedQueue<TreeMap<String, Posting>>[] parserWriterBuffer = new ConcurrentLinkedQueue[numOfWriterThreads];
+    public static ConcurrentLinkedQueue<Task> taskQueue;
+    public static boolean isParsingDone;
+    public static HashMap<String, Boolean> stopWords = new HashMap<>();
+    public static int flushFactor = 50;
+    public static int mergeFactor = 10;
+    public static String tempOutputFolderPath = "/tmp/tempoutput/";
 }

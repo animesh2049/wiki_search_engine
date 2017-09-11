@@ -21,5 +21,4 @@ public class Pair<L, R> {
         Pair temp = (Pair) o;
         return ((this.first==((Pair) o).getFirst()) && (this.second==((Pair) o).getSecond()));
     }
-
 }
