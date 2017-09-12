@@ -12,7 +12,7 @@ class WriterThread implements Runnable {
     private Integer tid;
     private Integer docNum;
     private String folderPath;
-    HashMap<String, String> tagToShortTag;
+    private HashMap<String, String> tagToShortTag;
 
     WriterThread(Integer tid, String tempFolderPath) {
         this.tid = tid;
@@ -34,6 +34,8 @@ class WriterThread implements Runnable {
             PrintWriter writer = new PrintWriter(filePath, "utf-8");
             writer.print(toWrite);
             writer.close();
+            Task myTask = new Task(filePath, new File(filePath).length(), false);
+            GlobalVars.taskQueue.add(myTask);
         } catch (Exception e) {
             System.err.println("Error while writing file :(");
             e.printStackTrace();
@@ -56,6 +58,8 @@ class WriterThread implements Runnable {
             if (tempTask != null) {
                 if (tempTask.get("^end$") != null) {
                     GlobalVars.isParsingDone = true;
+                    Task myTask = new Task("", 0, false, "writerDone");
+                    GlobalVars.taskQueue.add(myTask);
                     System.out.println("Got end signal now ending");
                     return;
                 }

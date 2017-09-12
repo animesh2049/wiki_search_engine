@@ -28,7 +28,6 @@ public class Main {
         myParser.start();
         MyIndexWriter myWriter = new MyIndexWriter();
         myWriter.start();
-        long end = System.currentTimeMillis();
     }
 
     private static void init() {
@@ -36,8 +35,12 @@ public class Main {
             GlobalVars.readerParserBuffer[i] = new ConcurrentLinkedQueue<>();
             GlobalVars.parserWriterBuffer[i] = new ConcurrentLinkedQueue<>();
         }
+        for (int i=0; i<GlobalVars.numOfMergerThreads; i++) {
+            GlobalVars.fileMergerBuffer[i] = new ConcurrentLinkedQueue<>();
+        }
         GlobalVars.isParsingDone = false;
-        GlobalVars.taskQueue = new ConcurrentLinkedQueue<Task>();
+        GlobalVars.isMergingDone = false;
+        GlobalVars.taskQueue = new ConcurrentLinkedQueue<>();
     }
 
     private static void initStopWords() throws Exception {

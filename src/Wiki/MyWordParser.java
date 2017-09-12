@@ -15,7 +15,7 @@ class Posting {
 
 class ParserThread implements Runnable {
     private TreeMap<String, Posting> postingList;
-    int tid;
+    private int tid;
 
     ParserThread(int tid) {
         postingList = new TreeMap<>();

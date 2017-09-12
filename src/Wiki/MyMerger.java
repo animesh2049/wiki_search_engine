@@ -5,26 +5,44 @@ import java.util.ArrayList;
 import java.util.PriorityQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 class MergerThread implements Runnable {
     private Integer tid;
     private String outputFolderPath;
-    static PriorityQueue<Entry> pq;
+    private PriorityQueue<Entry> pq;
+    public final Lock lock;
+    public final Condition cond;
 
     MergerThread(Integer tid) {
         this.tid = tid;
         this.outputFolderPath = GlobalVars.tempOutputFolderPath + "/" + this.tid/4 + "/";
         this.pq = new PriorityQueue<>();
+        this.lock = new ReentrantLock();
+        this.cond = this.lock.newCondition();
+    }
+
+//    public void addFiles(ArrayList<Pair<String, String>> filesToMerge) {
+//        this.fileNameSizeList.addAll(filesToMerge);
+//    }
+
+
+    public Integer getTid() {
+        return this.tid;
+    }
+
+    public Condition getCond() {
+        return this.cond;
     }
 
     public void readBlocks(ArrayList<File> filesToMerge) throws IOException {
 
-        PriorityQueue<Entry2> pq2 = new PriorityQueue<Entry2>();
-        String fileName = null;
-        String line = null;
-        ArrayList<BufferedReader> buff = new ArrayList<BufferedReader>(GlobalVars.mergeFactor);
+        PriorityQueue<Entry2> pq2 = new PriorityQueue<>();
+        String line;
+        ArrayList<BufferedReader> buff = new ArrayList<>(filesToMerge.size());
         int iter=0;
-        String str2, str1;
 
         for (File tempFileIter : filesToMerge) {
             try {
@@ -102,19 +120,12 @@ class MergerThread implements Runnable {
         }
 
     }
-
+    @Override
     public void run() {
         File folder = new File(this.outputFolderPath);
         File[] listOfFiles = folder.listFiles();
-        ArrayList<File> filesToMerge = new ArrayList<>();
-        for (int i=GlobalVars.mergeFactor*this.tid; (i<(GlobalVars.mergeFactor*this.tid)+GlobalVars.mergeFactor) && (i<listOfFiles.length); i++) {
-            if (listOfFiles[i].getName() == "z_" + this.tid) continue;
-            filesToMerge.add(listOfFiles[i]);
-        }
-        try {
-            readBlocks(filesToMerge);
-        } catch (Exception e) {
-            e.printStackTrace();
+        while (true) {
+            Task myTask = new Task(this, true);
         }
     }
 }

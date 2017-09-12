@@ -1,4 +1,6 @@
 package Wiki;
+import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -15,7 +17,9 @@ public class GlobalVars {
     public static ConcurrentLinkedQueue< Tuple<Integer, String, String> >[] readerParserBuffer = new ConcurrentLinkedQueue[numOfReaderThreads];
     public static ConcurrentLinkedQueue<TreeMap<String, Posting>>[] parserWriterBuffer = new ConcurrentLinkedQueue[numOfWriterThreads];
     public static ConcurrentLinkedQueue<Task> taskQueue;
+    public static ConcurrentLinkedQueue<ArrayList<File>>[] fileMergerBuffer = new ConcurrentLinkedQueue[numOfMergerThreads];
     public static boolean isParsingDone;
+    public static boolean isMergingDone;
     public static HashMap<String, Boolean> stopWords = new HashMap<>();
     public static int flushFactor = 50;
     public static int mergeFactor = 10;
