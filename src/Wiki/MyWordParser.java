@@ -52,7 +52,11 @@ class ParserThread implements Runnable {
 
     @Override
     public void run() {
-        Stemmer myStemmer = new Stemmer();
+        /*
+        Here all the threads will have different stemmer which
+        will reduce the efficiency because each will have a different cache.
+         */
+        Stemmer myStemmer = new Stemmer(100000000);
         while (true) {
             Tuple<Integer, String, String> parseTask = GlobalVars.readerParserBuffer[this.tid].poll();
             if (parseTask != null) {
@@ -69,8 +73,7 @@ class ParserThread implements Runnable {
                     continue;
                 }
                 if (GlobalVars.stopWords.get(tempWord) != null) continue; // Stop word removal
-                myStemmer.add(tempWord.toCharArray(), tempWord.length());
-                tempWord = myStemmer.stem(); // Stemming
+                //tempWord = myStemmer.add(tempWord, tempWord.length());
                 putWord(tempWord, parseTask.getThird(), parseTask.getFirst());
             }
         }

@@ -20,11 +20,12 @@ class ReaderThread implements Runnable {
     private char[] text;
     private int tid;
     private Integer docId;
-    private Pattern regexPattern, extraPattern, infoBoxStart, infoBoxEnd, url, category;
+    private Pattern allregex, regexPattern, extraPattern, infoBoxStart, infoBoxEnd, url, category;
     private ArrayList<Pair<String, String>> docToOffset;
     private boolean foundIdTag, foundCategory, foundUrl;
     private boolean foundIdNum, foundInfoBox;
     private long pageOffset;
+    private int infoBoxStartposition, infoBoxEndposition;
     private Integer relDocId;
     private ArrayList<Pair<String, String>> tempBuffer;
 
@@ -34,10 +35,13 @@ class ReaderThread implements Runnable {
         this.tid = tid;
         this.regexPattern = Pattern.compile("[^a-zA-Z0-9\\-\']+");
         this.extraPattern = Pattern.compile("-{2,}|'{2,}");
-        this.infoBoxStart = Pattern.compile("\\{\\{Infobox .*");
-        this.infoBoxEnd = Pattern.compile(".*\n}}\n.*|^}}\n.*", Pattern.DOTALL);
+        this.infoBoxStart = Pattern.compile("\\{\\{Infobox");
+        //this.infoBoxEnd = Pattern.compile(".*\n}}\n.*|^}}\n.*", Pattern.DOTALL);
+        this.infoBoxEnd = Pattern.compile("\n}}\n", Pattern.DOTALL);
+
         this.url = Pattern.compile("http://[^ ]*");
         this.category = Pattern.compile("\\[\\[Category:.*]]");
+        this.allregex = Pattern.compile("http://[^ ]*|\\[\\[Category:.*]]|\\{\\{Infobox .*|\n}}\n", Pattern.DOTALL);
         this.docToOffset = new ArrayList<>();  // Use at the time of querying; Maps docId to the offset where page tag starts
         this.docId = 0;
         this.foundIdTag = false;
@@ -87,7 +91,7 @@ class ReaderThread implements Runnable {
                     break;
             }
             bytesRead = xmlr.getLocation().getCharacterOffset();
-            if (bytesRead>=endOffset) {
+            if (bytesRead >= endOffset) {
                 System.out.println("End of reading from xmlreader :)");
                 GlobalVars.readerParserBuffer[this.tid].add(new Tuple<>(this.docId, "^$", ""));
                 return;
@@ -112,63 +116,59 @@ class ReaderThread implements Runnable {
                     insideText = xmlr.getText();
                     if (this.foundIdTag && !this.foundIdNum) {
                         this.docId = Integer.valueOf(insideText);// This add extra things i.e. It treads Id as
-                        this.foundIdNum = true;                  // different field than others. So this won't appear in indices
+                        this.foundIdNum = true;                 // different field than others. So this won't appear in indices
                         for (Pair<String, String> temp : tempBuffer) {
                             GlobalVars.readerParserBuffer[this.tid].add(new Tuple<>(this.docId, temp.getFirst(), temp.getSecond()));
                         }
                         this.tempBuffer.clear(); // Check if it deletes the contents of arraylist becuase next add should start from the begining
-                        this.docToOffset.add(new Pair<>(insideText, String.valueOf(this.pageOffset)));
+                        //this.docToOffset.add(new Pair<>(insideText, String.valueOf(this.pageOffset)));
                         continue;
                     }
                     /*
                         Here we can filter things like id of revision, user in
                         order to reduce the index size.
                      */
-                    Matcher urlMatcher = this.url.matcher(insideText);
-                    while (urlMatcher.find()) {
-                        this.foundUrl = true;
-                        GlobalVars.readerParserBuffer[this.tid].add(
-                                new Tuple<>(this.docId, urlMatcher.group(), "external_links")
-                        );
-                    }
-                    if (this.foundUrl) {
-                        this.foundUrl = false;
-                        continue;
-                    }
-                    Matcher categoryMatcher = this.category.matcher(insideText);
-                    while (categoryMatcher.find()){
-                        this.foundCategory = true;
-                        GlobalVars.readerParserBuffer[this.tid].add(
-                                new Tuple<>(this.docId, categoryMatcher.group().substring(11), "category")
-                        );
-                    }
-                    if (this.foundCategory) {
-                        this.foundCategory = false;
-                        continue;
-                    }
-                    Matcher infoboxMatcher = infoBoxStart.matcher(insideText);
-                    if (infoboxMatcher.find()) {
-                        this.foundInfoBox = true;
-                        this.currTag = "infobox";
-                    }
-                    Matcher infoBoxEndMatcher = infoBoxEnd.matcher(insideText);
-                    if (this.foundInfoBox && infoBoxEndMatcher.find()) {
-                        this.foundInfoBox = false;
-                        this.currTag = "text";
-                    }
-                    insideText = regexPattern.matcher(insideText).replaceAll(" ");
-                    insideText = extraPattern.matcher(insideText).replaceAll("");
-                    String[] words = insideText.split(" ");
-                    for (String word : words) {
-                        if (!word.isEmpty()) {
-                            if (this.foundIdNum) {
-                                GlobalVars.readerParserBuffer[this.tid].add(new Tuple<>(this.docId, word, this.currTag));
-                            }
-                            else  {
-                                this.tempBuffer.add(new Pair<>(word, this.currTag));
+
+                    Matcher allMatcher = this.allregex.matcher(insideText);
+                    int start = 0, end = 0;
+                    while (allMatcher.find()) {
+                        end = allMatcher.start();
+                        parseExtra(insideText.substring(start, end));
+                        start = allMatcher.end();
+                        String Found_String = allMatcher.group();
+                        Matcher urlMatcher = this.url.matcher(Found_String);
+                        Matcher categoryMatcher = this.category.matcher(Found_String);
+                        Matcher infoBoxStartMatcher = this.infoBoxStart.matcher(Found_String);
+                        if (urlMatcher.find()) {
+                            this.foundUrl = true;
+                            GlobalVars.readerParserBuffer[this.tid].add(
+                                    new Tuple<>(this.docId, Found_String, "external_links")
+                            );
+
+                        }
+                        else if (categoryMatcher.find()) {
+                            this.foundCategory = true;
+                            String[] catTexts = categoryMatcher.group().substring(11).split(" ");
+                            for (String text : catTexts) {
+                                text = regexPattern.matcher(text).replaceAll(" ");
+                                text = extraPattern.matcher(text).replaceAll("");
+                                text = text.trim();
+                                if (text == null) continue;
+                                GlobalVars.readerParserBuffer[this.tid].add(
+                                        new Tuple<>(this.docId, text, "category")
+                                );
                             }
                         }
+                        else if (infoBoxStartMatcher.find()){
+                            this.foundInfoBox = true;
+                            this.currTag = "infobox";
+                        }
+                        else if (this.foundInfoBox) {
+                            this.foundInfoBox = false;
+                            this.currTag = "text";
+                        }
                     }
+                    parseExtra(insideText.substring(start));
                     break;
                 case XMLStreamConstants.END_ELEMENT:
                     elementName = xmlr.getLocalName();
@@ -186,6 +186,21 @@ class ReaderThread implements Runnable {
         }
     }
 
+    private void parseExtra(String insideText) {
+        insideText = regexPattern.matcher(insideText).replaceAll(" ");
+        insideText = extraPattern.matcher(insideText).replaceAll("");
+        String[] words = insideText.split(" ");
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                if (this.foundIdNum) {
+                    GlobalVars.readerParserBuffer[this.tid].add(new Tuple<>(this.docId, word, this.currTag));
+                } else {
+                    this.tempBuffer.add(new Pair<>(word, this.currTag));
+                }
+            }
+        }
+    }
+
     @Override
     public void run() {
         try {
@@ -199,22 +214,25 @@ class ReaderThread implements Runnable {
             System.err.println("Error occurred while parsing :(");
             e.printStackTrace();
         }
+        System.out.println("Enede reading");
     }
 }
 
 public class MyXmlReader {
     public long fileSize = 0;
     public String xmlFileName;
+
     MyXmlReader(String fileName, long fileSize) {
         this.xmlFileName = fileName;
         this.fileSize = fileSize;
     }
+
     public void start() {
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
         long startOffset = 0;
-        long lengthToRead = fileSize/GlobalVars.numOfReaderThreads;
+        long lengthToRead = fileSize / GlobalVars.numOfReaderThreads;
         for (int i = 0; i < GlobalVars.numOfReaderThreads; i++) {
-            ReaderThread reader = new ReaderThread(startOffset, startOffset+lengthToRead, i);
+            ReaderThread reader = new ReaderThread(startOffset, startOffset + lengthToRead, i);
             startOffset += lengthToRead + 1;
             executor.execute(reader);
         }

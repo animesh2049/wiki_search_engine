@@ -34,7 +34,10 @@ package Wiki;
 
 */
 
+import sun.reflect.generics.tree.Tree;
+
 import java.io.*;
+import java.util.*;
 
 /**
  * Stemmer, implementing the Porter Stemming Algorithm
@@ -44,8 +47,29 @@ import java.io.*;
  * by calling one of the various stem(something) methods.
  */
 
-public class Stemmer
-{  private char[] b;
+class CircularQueue {
+    String[]  myQueue;
+    private int pointer;
+    private int maxSize;
+
+    CircularQueue(int size) {
+        this.myQueue = new String[size];
+        this.pointer = 0;
+        this.maxSize = size;
+    }
+
+    public String putInQueue(String word) {
+        String ans = this.myQueue[this.pointer];
+        this.myQueue[this.pointer] = word;
+        this.pointer = (this.pointer + 1) % this.maxSize;
+        return ans;
+    }
+}
+
+public class Stemmer {
+    private HashMap<String, String> stemmedWords;
+    private CircularQueue myMRU;
+    private char[] b;
     private int i,     /* offset into b */
             i_end, /* offset to end of stemmed word */
             j, k;
@@ -55,6 +79,14 @@ public class Stemmer
     {  b = new char[INC];
         i = 0;
         i_end = 0;
+    }
+
+    public Stemmer(int sizeOfMRU) {
+        b = new char[INC];
+        i = 0;
+        i_end = 0;
+        this.stemmedWords = new HashMap<>();
+        this.myMRU = new CircularQueue(sizeOfMRU);
     }
 
     /**
@@ -77,13 +109,23 @@ public class Stemmer
      * faster.
      */
 
-    public void add(char[] w, int wLen)
-    {  if (i+wLen >= b.length)
-    {  char[] new_b = new char[i+wLen+INC];
-        for (int c = 0; c < i; c++) new_b[c] = b[c];
-        b = new_b;
-    }
+    public String add(String word, int wLen) {
+        if (this.stemmedWords.get(word) != null) {
+            return this.stemmedWords.get(word);
+        }
+        char[] w = word.toCharArray();
+        if (i+wLen >= b.length) {
+            char[] new_b = new char[i+wLen+INC];
+            for (int c = 0; c < i; c++)
+                new_b[c] = b[c];
+            b = new_b;
+        }
         for (int c = 0; c < wLen; c++) b[i++] = w[c];
+        String ans =  stem();
+        String toRemove = this.myMRU.putInQueue(ans);
+        if (toRemove != null) this.stemmedWords.remove(toRemove);
+        this.stemmedWords.put(word, ans);
+        return ans;
     }
 
     /**
@@ -354,11 +396,12 @@ public class Stemmer
      * from the input.  You can retrieve the result with
      * getResultLength()/getResultBuffer() or toString().
      */
-    public String stem()
-    {  k = i - 1;
-        if (k > 1) { step1(); step2(); step3(); step4(); step5(); step6(); }
+    public String stem() {
+        k = i - 1;
+        if (k > 1) {
+            step1(); step2(); step3(); step4(); step5(); step6();
+        }
         i_end = k+1; i = 0;
-
         return new String(b,0,i_end);
     }
 

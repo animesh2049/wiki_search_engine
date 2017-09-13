@@ -37,16 +37,25 @@ public class ManageMergers {
                         As files become bigger the merge factor should ideally reduce.
                      */
                     Job tempJob;
-                    ArrayList<File> filesToMerge;
-                    if (this.jobQueue.size() < GlobalVars.mergeFactor) {
-//                        newTask
-                    }
+                    ArrayList<File> filesToMerge = new ArrayList<>();
+                    /*if (this.jobQueue.size() < GlobalVars.mergeFactor) {
+                        newTask.getWhoSlept().getLock().lock();
+                        newTask.getWhoSlept().getCond().signal();
+                        continue;
+                    }*/
                     for (int i=0; i < GlobalVars.mergeFactor; i++) {
                         tempJob = this.jobQueue.poll();
                         if (tempJob != null) {
-
+                            filesToMerge.add(new File(tempJob.getFileName()));
                         }
+                        else break;
                     }
+                    if (filesToMerge.size() > 1)
+                        GlobalVars.fileMergerBuffer[newTask.getTid()].add(filesToMerge);
+                    else
+                        GlobalVars.fileMergerBuffer[newTask.getTid()].add(null);
+                    newTask.getWhoSlept().getLock().lock();
+                    newTask.getWhoSlept().getCond().signal();
                 }
                 else {
                     if (newTask.getSpecialInfo() != null) this.writerDone += 1;

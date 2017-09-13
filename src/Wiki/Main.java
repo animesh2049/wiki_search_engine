@@ -28,6 +28,10 @@ public class Main {
         myParser.start();
         MyIndexWriter myWriter = new MyIndexWriter();
         myWriter.start();
+        MyMerger myMerger = new MyMerger();
+        myMerger.start();
+        ManageMergers manager = new ManageMergers();
+        manager.start();
     }
 
     private static void init() {

@@ -92,5 +92,4 @@ public class MyIndexWriter {
         }
         executor.shutdown();
     }
-
 }

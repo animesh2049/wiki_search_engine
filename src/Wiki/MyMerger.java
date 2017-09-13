@@ -13,8 +13,9 @@ class MergerThread implements Runnable {
     private Integer tid;
     private String outputFolderPath;
     private PriorityQueue<Entry> pq;
-    public final Lock lock;
-    public final Condition cond;
+    private final Lock lock;
+    private final Condition cond;
+    private int localFileCounter;
 
     MergerThread(Integer tid) {
         this.tid = tid;
@@ -22,12 +23,8 @@ class MergerThread implements Runnable {
         this.pq = new PriorityQueue<>();
         this.lock = new ReentrantLock();
         this.cond = this.lock.newCondition();
+        this.localFileCounter = 0;
     }
-
-//    public void addFiles(ArrayList<Pair<String, String>> filesToMerge) {
-//        this.fileNameSizeList.addAll(filesToMerge);
-//    }
-
 
     public Integer getTid() {
         return this.tid;
@@ -37,12 +34,20 @@ class MergerThread implements Runnable {
         return this.cond;
     }
 
+    public Lock getLock() {
+        return this.lock;
+    }
+
     public void readBlocks(ArrayList<File> filesToMerge) throws IOException {
 
         PriorityQueue<Entry2> pq2 = new PriorityQueue<>();
         String line;
         ArrayList<BufferedReader> buff = new ArrayList<>(filesToMerge.size());
         int iter=0;
+        System.out.println("Now going to merge following files :D");
+        for (File temp : filesToMerge) {
+            System.out.println(temp.getName());
+        }
 
         for (File tempFileIter : filesToMerge) {
             try {
@@ -59,8 +64,10 @@ class MergerThread implements Runnable {
                 pq.add(new Entry(tokens[0], tokens[1], i));
             }
         }
+        String newFile = GlobalVars.tempOutputFolderPath + this.tid + "_" + this.localFileCounter;
         try {
-            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("z_" + this.tid), "utf-8"));
+            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(newFile), "utf-8"));
+            this.localFileCounter += 1;
             Entry first = null, next= null;
             int flag = 0;
             String writeline = "";
@@ -119,19 +126,42 @@ class MergerThread implements Runnable {
             buff.get(iter).close();
         }
 
+        for (File file : filesToMerge) {
+            file.delete();
+        }
+        File newFileObject = new File(newFile);
+        Task myJob = new Task(newFile, newFileObject.length(), false);
+        GlobalVars.taskQueue.add(myJob);
     }
     @Override
     public void run() {
-        File folder = new File(this.outputFolderPath);
-        File[] listOfFiles = folder.listFiles();
         while (true) {
+            this.lock.lock();
             Task myTask = new Task(this, true);
+            GlobalVars.taskQueue.add(myTask);
+            try {
+                this.cond.await();
+            }
+            catch (InterruptedException e) {
+                System.out.println("Couldn't sleep on that variable");
+                e.printStackTrace();
+                continue;
+            }
+            ArrayList<File> fileList = GlobalVars.fileMergerBuffer[this.tid].poll();
+            if (fileList == null) continue;
+            try {
+                readBlocks(fileList);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+            this.lock.unlock();
         }
     }
 }
 
 public class MyMerger {
-    public static void start() {
+    public void start() {
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(GlobalVars.numOfMergerThreads);
         for (int i = 0; i < GlobalVars.numOfMergerThreads; i++) {
             MergerThread merger = new MergerThread(i);
