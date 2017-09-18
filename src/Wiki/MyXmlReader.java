@@ -34,10 +34,8 @@ class ReaderThread implements Runnable {
         this.endOffset = end;
         this.tid = tid;
         this.regexPattern = Pattern.compile("[^a-zA-Z0-9\\-\']+");
-//        this.extraPattern = Pattern.compile("-{2,}|'{2,}");
         this.extraPattern = Pattern.compile("([a-zA-Z0-9]+[\\-\']?) *[a-zA-Z0-9]+");
         this.infoBoxStart = Pattern.compile("\\{\\{Infobox");
-        //this.infoBoxEnd = Pattern.compile(".*\n}}\n.*|^}}\n.*", Pattern.DOTALL);
         this.infoBoxEnd = Pattern.compile("\n}}\n", Pattern.DOTALL);
         this.newExtraPattern = Pattern.compile("([a-zA-Z0-9]+[\\-]?)*[a-zA-Z0-9]+");
         this.url = Pattern.compile("http://[a-zA-Z0-9.:/?&='\"]*");
