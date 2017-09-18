@@ -23,9 +23,6 @@ public class GlobalVars {
     public static int flushFactor = 50;
     public static int mergeFactor = 10;
     public static String tempOutputFolderPath = "/tmp/tempoutput";
-//    public static String finalMergerdInverseIndex = "/home/animesh/tmp/irefinal/finalMergedIndex";
     public static int sizeOfMru = 10000;
     public static Stemmer myStemmer = new Stemmer(sizeOfMru);
-//    public static String secondaryIndexFile = "/tmp/secIndex.txt";
-//    public static String docIdToTitleFile = "~/tmp/title_id.txt";
 }
