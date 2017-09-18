@@ -34,10 +34,9 @@ package Wiki;
 
 */
 
-import sun.reflect.generics.tree.Tree;
-
-import java.io.*;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Stemmer, implementing the Porter Stemming Algorithm
@@ -48,7 +47,7 @@ import java.util.*;
  */
 
 class CircularQueue {
-    String[]  myQueue;
+    private String[]  myQueue;
     private int pointer;
     private int maxSize;
 
@@ -67,6 +66,7 @@ class CircularQueue {
 }
 
 public class Stemmer {
+    private Pattern regexPattern, extraPattern;
     private HashMap<String, String> stemmedWords;
     private CircularQueue myMRU;
     private char[] b;
@@ -87,6 +87,8 @@ public class Stemmer {
         i_end = 0;
         this.stemmedWords = new HashMap<>();
         this.myMRU = new CircularQueue(sizeOfMRU);
+        this.regexPattern = Pattern.compile("[^a-zA-Z0-9\\-\']+");
+        this.extraPattern = Pattern.compile("([a-zA-Z0-9]+[\\-\']?)*[a-zA-Z0-9]+");
     }
 
     /**
@@ -109,11 +111,15 @@ public class Stemmer {
      * faster.
      */
 
-    public String add(String word, int wLen) {
+    public String add(String word) {
+        if (GlobalVars.stopWords.get(word) != null) return "";
+
         if (this.stemmedWords.get(word) != null) {
             return this.stemmedWords.get(word);
         }
+
         char[] w = word.toCharArray();
+        int wLen = word.length();
         if (i+wLen >= b.length) {
             char[] new_b = new char[i+wLen+INC];
             for (int c = 0; c < i; c++)

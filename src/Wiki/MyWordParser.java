@@ -1,5 +1,7 @@
 package Wiki;
 
+import sun.reflect.generics.tree.Tree;
+
 import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -10,6 +12,10 @@ class Posting {
 
     Posting() {
         this.docToFreq = new TreeMap<>();
+    }
+
+    Posting(TreeMap<Integer, TreeMap<String, Integer>> posting) {
+        this.docToFreq = posting;
     }
 }
 
@@ -52,15 +58,10 @@ class ParserThread implements Runnable {
 
     @Override
     public void run() {
-        /*
-        Here all the threads will have different stemmer which
-        will reduce the efficiency because each will have a different cache.
-         */
-        Stemmer myStemmer = new Stemmer(100000000);
         while (true) {
             Tuple<Integer, String, String> parseTask = GlobalVars.readerParserBuffer[this.tid].poll();
             if (parseTask != null) {
-                String tempWord = parseTask.getSecond().toLowerCase(); // To lower case
+                String tempWord = parseTask.getSecond().toLowerCase();
                 if (tempWord.equals("^$")) {
                     System.out.println("End of parsing");
                     TreeMap<String, Posting> endSignal = new TreeMap<>();
@@ -72,9 +73,9 @@ class ParserThread implements Runnable {
                     flush();
                     continue;
                 }
-                if (GlobalVars.stopWords.get(tempWord) != null) continue; // Stop word removal
-                //tempWord = myStemmer.add(tempWord, tempWord.length());
-                putWord(tempWord, parseTask.getThird(), parseTask.getFirst());
+                tempWord = GlobalVars.myStemmer.add(tempWord);
+                if (!tempWord.equals(""))
+                    putWord(tempWord, parseTask.getThird(), parseTask.getFirst());
             }
         }
     }

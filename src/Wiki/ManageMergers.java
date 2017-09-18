@@ -21,11 +21,14 @@ class CustomComparator implements Comparator<Job> {
 public class ManageMergers {
     private int writerDone;
     private PriorityQueue<Job> jobQueue;
+    private int numOfMergesDone, filesAvailable;
 
     ManageMergers() {
         this.writerDone = 0;
         CustomComparator myComparator = new CustomComparator();
         this.jobQueue = new PriorityQueue<>(10, myComparator);
+        this.filesAvailable = 0;
+        this.numOfMergesDone = 0;
     }
 
     public void start() {
@@ -34,28 +37,26 @@ public class ManageMergers {
             if (newTask != null) {
                 if (newTask.getJobType()) {
                     /*
-                        As files become bigger the merge factor should ideally reduce.
+                     As files become bigger the merge factor should ideally reduce.
                      */
                     Job tempJob;
                     ArrayList<File> filesToMerge = new ArrayList<>();
-                    /*if (this.jobQueue.size() < GlobalVars.mergeFactor) {
-                        newTask.getWhoSlept().getLock().lock();
-                        newTask.getWhoSlept().getCond().signal();
-                        continue;
-                    }*/
                     for (int i=0; i < GlobalVars.mergeFactor; i++) {
                         tempJob = this.jobQueue.poll();
                         if (tempJob != null) {
+                            System.out.println(tempJob.getFileName() + " " + tempJob.getFileSize());
                             filesToMerge.add(new File(tempJob.getFileName()));
                         }
                         else break;
                     }
-                    if (filesToMerge.size() > 1)
+                    System.out.println("Done");
+                    if (filesToMerge.size() > 1) {
                         GlobalVars.fileMergerBuffer[newTask.getTid()].add(filesToMerge);
-                    else
-                        GlobalVars.fileMergerBuffer[newTask.getTid()].add(null);
+                    }
+                    filesToMerge.clear();
                     newTask.getWhoSlept().getLock().lock();
                     newTask.getWhoSlept().getCond().signal();
+                    newTask.getWhoSlept().getLock().unlock();
                 }
                 else {
                     if (newTask.getSpecialInfo() != null) this.writerDone += 1;

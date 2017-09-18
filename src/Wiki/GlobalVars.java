@@ -6,8 +6,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GlobalVars {
-    public static String xmlFileName = "/tmp/test.xml";
-    public static String tempFolder = "/tmp/testing";
+    public static String xmlFileName = "/home/animesh/Downloads/wiki-search-small.xml";
     public static String[] mainTags = {"title", "comment", "text", "general_doc"};
     public static String stopWordFile = "/home/animesh/IdeaProjects/wiki_search_engine/src/Wiki/StopWords.txt";
     public static int numOfReaderThreads = 1; // All these numbers should be same so there is a redundancy here.
@@ -23,5 +22,10 @@ public class GlobalVars {
     public static HashMap<String, Boolean> stopWords = new HashMap<>();
     public static int flushFactor = 50;
     public static int mergeFactor = 10;
-    public static String tempOutputFolderPath = "/tmp/tempoutput/";
+    public static String tempOutputFolderPath = "/tmp/tempoutput";
+//    public static String finalMergerdInverseIndex = "/home/animesh/tmp/irefinal/finalMergedIndex";
+    public static int sizeOfMru = 10000;
+    public static Stemmer myStemmer = new Stemmer(sizeOfMru);
+//    public static String secondaryIndexFile = "/tmp/secIndex.txt";
+//    public static String docIdToTitleFile = "~/tmp/title_id.txt";
 }

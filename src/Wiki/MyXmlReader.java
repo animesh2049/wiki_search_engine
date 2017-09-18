@@ -4,7 +4,6 @@ package Wiki;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import javax.xml.stream.*;
@@ -21,6 +20,7 @@ class ReaderThread implements Runnable {
     private int tid;
     private Integer docId;
     private Pattern allregex, regexPattern, extraPattern, infoBoxStart, infoBoxEnd, url, category;
+    private Pattern newExtraPattern;
     private ArrayList<Pair<String, String>> docToOffset;
     private boolean foundIdTag, foundCategory, foundUrl;
     private boolean foundIdNum, foundInfoBox;
@@ -34,12 +34,13 @@ class ReaderThread implements Runnable {
         this.endOffset = end;
         this.tid = tid;
         this.regexPattern = Pattern.compile("[^a-zA-Z0-9\\-\']+");
-        this.extraPattern = Pattern.compile("-{2,}|'{2,}");
+//        this.extraPattern = Pattern.compile("-{2,}|'{2,}");
+        this.extraPattern = Pattern.compile("([a-zA-Z0-9]+[\\-\']?) *[a-zA-Z0-9]+");
         this.infoBoxStart = Pattern.compile("\\{\\{Infobox");
         //this.infoBoxEnd = Pattern.compile(".*\n}}\n.*|^}}\n.*", Pattern.DOTALL);
         this.infoBoxEnd = Pattern.compile("\n}}\n", Pattern.DOTALL);
-
-        this.url = Pattern.compile("http://[^ ]*");
+        this.newExtraPattern = Pattern.compile("([a-zA-Z0-9]+[\\-]?)*[a-zA-Z0-9]+");
+        this.url = Pattern.compile("http://[a-zA-Z0-9.:/?&='\"]*");
         this.category = Pattern.compile("\\[\\[Category:.*]]");
         this.allregex = Pattern.compile("http://[^ ]*|\\[\\[Category:.*]]|\\{\\{Infobox .*|\n}}\n", Pattern.DOTALL);
         this.docToOffset = new ArrayList<>();  // Use at the time of querying; Maps docId to the offset where page tag starts
@@ -51,26 +52,6 @@ class ReaderThread implements Runnable {
         this.foundCategory = false;
         this.foundInfoBox = false;
         this.foundUrl = false;
-
-        /*int charsRead;
-        List<String> tempChars = new ArrayList<>();
-        System.out.println("Initial start offset :" + startOffset);
-        try {
-            FileReader tempReader= new FileReader(GlobalVars.xmlFileName);
-            tempReader.skip(this.startOffset);
-            while ((charsRead = tempReader.read()) != -1) {
-                tempChars.add(String.valueOf((char)charsRead));
-                this.startOffset += 1;
-                if (tempChars.size() > 5) tempChars.remove(0);
-                String temp = "";
-                for (String i : tempChars) temp += i;
-                if (temp.equals("<page")) break;
-            }
-            this.startOffset -= 5;
-            System.out.println("Final offset is : " + startOffset);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }*/
     }
 
     private void parse(XMLStreamReader xmlr) throws Exception {
@@ -98,7 +79,6 @@ class ReaderThread implements Runnable {
             }
         }
         GlobalVars.readerParserBuffer[this.tid].add(new Tuple<>(this.docId, "^$", ""));
-        return;
     }
 
     private void readPageTag(XMLStreamReader xmlr) throws Exception {
@@ -115,13 +95,12 @@ class ReaderThread implements Runnable {
                 case XMLStreamConstants.CHARACTERS:
                     insideText = xmlr.getText();
                     if (this.foundIdTag && !this.foundIdNum) {
-                        this.docId = Integer.valueOf(insideText);// This add extra things i.e. It treads Id as
-                        this.foundIdNum = true;                 // different field than others. So this won't appear in indices
+                        this.docId = Integer.valueOf(insideText);
+                        this.foundIdNum = true;
                         for (Pair<String, String> temp : tempBuffer) {
                             GlobalVars.readerParserBuffer[this.tid].add(new Tuple<>(this.docId, temp.getFirst(), temp.getSecond()));
                         }
-                        this.tempBuffer.clear(); // Check if it deletes the contents of arraylist becuase next add should start from the begining
-                        //this.docToOffset.add(new Pair<>(insideText, String.valueOf(this.pageOffset)));
+                        this.tempBuffer.clear();
                         continue;
                     }
                     /*
@@ -142,18 +121,22 @@ class ReaderThread implements Runnable {
                         if (urlMatcher.find()) {
                             this.foundUrl = true;
                             GlobalVars.readerParserBuffer[this.tid].add(
-                                    new Tuple<>(this.docId, Found_String, "external_links")
+                                    new Tuple<>(this.docId, urlMatcher.group(), "external_links")
                             );
 
                         }
                         else if (categoryMatcher.find()) {
                             this.foundCategory = true;
-                            String[] catTexts = categoryMatcher.group().substring(11).split(" ");
+                            String newText = categoryMatcher.group().substring(11);
+                            newText = this.regexPattern.matcher(newText).replaceAll(" ");
+                            newText = newText.trim();
+
+                            Matcher tempMatcher = this.extraPattern.matcher(newText);
+                            if (tempMatcher.find()) newText = tempMatcher.group();
+                            else return;
+                            String[] catTexts = newText.split(" ");
                             for (String text : catTexts) {
-                                text = regexPattern.matcher(text).replaceAll(" ");
-                                text = extraPattern.matcher(text).replaceAll("");
-                                text = text.trim();
-                                if (text == null) continue;
+                                if (text.equals("")) continue;
                                 GlobalVars.readerParserBuffer[this.tid].add(
                                         new Tuple<>(this.docId, text, "category")
                                 );
@@ -187,8 +170,12 @@ class ReaderThread implements Runnable {
     }
 
     private void parseExtra(String insideText) {
-        insideText = regexPattern.matcher(insideText).replaceAll(" ");
-        insideText = extraPattern.matcher(insideText).replaceAll("");
+        insideText = this.regexPattern.matcher(insideText).replaceAll(" ");
+        insideText = insideText.trim();
+
+        Matcher tempMatcher = this.extraPattern.matcher(insideText);
+        if (tempMatcher.find()) insideText = tempMatcher.group();
+        else return;
         String[] words = insideText.split(" ");
         for (String word : words) {
             if (!word.isEmpty()) {

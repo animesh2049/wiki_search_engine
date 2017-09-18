@@ -16,7 +16,7 @@ class WriterThread implements Runnable {
 
     WriterThread(Integer tid, String tempFolderPath) {
         this.tid = tid;
-        this.docNum = 0;
+        this.docNum = 1;
         this.folderPath = tempFolderPath;
         this.tagToShortTag = new HashMap<>();
         this.tagToShortTag.put("title", "t");
@@ -29,7 +29,7 @@ class WriterThread implements Runnable {
     }
 
     private void flushToFile(String toWrite) {
-        String filePath = this.folderPath + this.tid + "-" + this.docNum;
+        String filePath = this.folderPath + "/" + this.tid + "-" + this.docNum + ".txt";
         try {
             PrintWriter writer = new PrintWriter(filePath, "utf-8");
             writer.print(toWrite);
@@ -79,6 +79,7 @@ class WriterThread implements Runnable {
                 this.docNum += 1;
             }
             else if (GlobalVars.isParsingDone) return;
+            if (tempTask != null) tempTask.clear();
         }
     }
 }

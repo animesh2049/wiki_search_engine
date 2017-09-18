@@ -7,11 +7,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Main {
     public static void main(String[] args) {
-        if (args.length == 0) {
+        /*if (args.length == 0) {
             System.out.println("Usage: main xmlfilename");
             return;
-        }
-        GlobalVars.xmlFileName = args[0];
+        }*/
+//        GlobalVars.xmlFileName = args[0];
         init();
         try {
             initStopWords();
@@ -30,8 +30,8 @@ public class Main {
         myWriter.start();
         MyMerger myMerger = new MyMerger();
         myMerger.start();
-        ManageMergers manager = new ManageMergers();
-        manager.start();
+        ManageMergers myManager = new ManageMergers();
+        myManager.start();
     }
 
     private static void init() {
