@@ -51,7 +51,6 @@ class MergerThread implements Runnable {
     private void mergeFiles(ArrayList<File> fileList) throws Exception {
         String fileNameToWrite = this.outputFolderPath + this.tid + "-" + this.localFileCounter;
         BufferedWriter writer = new BufferedWriter(new FileWriter(fileNameToWrite));
-        System.out.println("Came to merge");
 
         ArrayList<BufferedReader> filesToMerge = new ArrayList<>();
         for (File file : fileList) filesToMerge.add(
@@ -78,7 +77,6 @@ class MergerThread implements Runnable {
             prevWord = this.priorityQueue.poll();
             if (prevWord != null) {
                 addNewLine(prevWord.getThird());
-//                System.out.println("word " + prevWord.getFirst());
                 postings.add(prevWord.getSecond());
                 newWord = this.priorityQueue.peek();
                 while ((prevWord != null) && (newWord != null) && (prevWord.getFirst().equals(newWord.getFirst()))) {
@@ -99,7 +97,6 @@ class MergerThread implements Runnable {
         writer.close();
         Task myTask = new Task(fileNameToWrite, new File(fileNameToWrite).length(), false);
         GlobalVars.taskQueue.add(myTask);
-        System.out.println("done merging");
         for (File file : fileList) {
             file.delete();
         }
@@ -178,7 +175,6 @@ class MergerThread implements Runnable {
                 this.cond.await();
             }
             catch (InterruptedException e) {
-                System.out.println("Couldn't sleep on that variable");
                 e.printStackTrace();
                 continue;
             }
