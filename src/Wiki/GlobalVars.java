@@ -15,8 +15,8 @@ public class GlobalVars {
     public static int numOfMergerThreads = 1;
     public static ConcurrentLinkedQueue< Tuple<Integer, String, String> >[] readerParserBuffer = new ConcurrentLinkedQueue[numOfReaderThreads];
     public static ConcurrentLinkedQueue<TreeMap<String, Posting>>[] parserWriterBuffer = new ConcurrentLinkedQueue[numOfWriterThreads];
-    public static ConcurrentLinkedQueue<Task> taskQueue;
-    public static ConcurrentLinkedQueue<ArrayList<File>>[] fileMergerBuffer = new ConcurrentLinkedQueue[numOfMergerThreads];
+   // public static ConcurrentLinkedQueue<Task> taskQueue;
+    public static ConcurrentLinkedQueue<File> fileMergerBuffer = new ConcurrentLinkedQueue();
     public static boolean isParsingDone;
     public static boolean isMergingDone;
     public static HashMap<String, Boolean> stopWords = new HashMap<>();
@@ -25,4 +25,6 @@ public class GlobalVars {
     public static String tempOutputFolderPath = "/tmp/tempoutput";
     public static int sizeOfMru = 10000;
     public static Stemmer myStemmer = new Stemmer(sizeOfMru);
+    public static long sleepTime = 200000;
+    public static int estimatedFilesToMerge = 1000;
 }

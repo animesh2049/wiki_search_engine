@@ -19,21 +19,13 @@ class CustomComparator implements Comparator<Job> {
 }
 
 public class ManageMergers {
-    private int writerDone;
-    private PriorityQueue<Job> jobQueue;
-    private int numOfMergesDone, filesAvailable;
 
-    ManageMergers() {
-        this.writerDone = 0;
-        CustomComparator myComparator = new CustomComparator();
-        this.jobQueue = new PriorityQueue<>(10, myComparator);
-        this.filesAvailable = 0;
-        this.numOfMergesDone = 0;
-    }
 
     public void start() {
         while (true) {
-            Task newTask = GlobalVars.taskQueue.poll();
+            //Task newTask = GlobalVars.taskQueue.poll();
+
+            Thread.sleep(GlobalVars.sleepTime);
             if (newTask != null) {
                 if (newTask.getJobType()) {
                     /*

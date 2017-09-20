@@ -2,11 +2,7 @@ package Wiki;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+
 
 class StringComparator implements Comparator<Tuple<String, String, BufferedReader>> {
 
@@ -15,42 +11,33 @@ class StringComparator implements Comparator<Tuple<String, String, BufferedReade
     }
 }
 
-class MergerThread implements Runnable {
-    private Integer tid;
+public class MergerThread extends Thread {
+    private ArrayList<File> filesToMerge = new ArrayList<>();
+    private String tid;
     private String outputFolderPath;
-    private final Lock lock;
-    private final Condition cond;
     private int localFileCounter;
     private PriorityQueue<Tuple<String, String, BufferedReader> > priorityQueue;
     private int filesEnded;
-    private ArrayList<BufferedReader> filesCompletelyRead = new ArrayList<>();
+//    private ArrayList<BufferedReader> filesCompletelyRead = new ArrayList<>();
 
 
-    MergerThread(Integer tid) {
+    MergerThread(String tid) {
         this.tid = tid;
         this.outputFolderPath = GlobalVars.tempOutputFolderPath + "/";
-        this.lock = new ReentrantLock();
-        this.cond = this.lock.newCondition();
         this.localFileCounter = 0;
         this.priorityQueue = new PriorityQueue<>(2*GlobalVars.mergeFactor, new StringComparator());
         this.filesEnded = 0;
     }
 
-    public Integer getTid() {
+    public String getTid() {
         return this.tid;
     }
 
-    public Condition getCond() {
-        return this.cond;
-    }
-
-    public Lock getLock() {
-        return this.lock;
-    }
 
     private void mergeFiles(ArrayList<File> fileList) throws Exception {
         String fileNameToWrite = this.outputFolderPath + this.tid + "-" + this.localFileCounter;
-        BufferedWriter writer = new BufferedWriter(new FileWriter(fileNameToWrite));
+        File writeFile = new File(fileNameToWrite);
+        BufferedWriter writer = new BufferedWriter(new FileWriter(writeFile));
 
         ArrayList<BufferedReader> filesToMerge = new ArrayList<>();
         for (File file : fileList) filesToMerge.add(
@@ -79,26 +66,24 @@ class MergerThread implements Runnable {
                 addNewLine(prevWord.getThird());
                 postings.add(prevWord.getSecond());
                 newWord = this.priorityQueue.peek();
-                while ((prevWord != null) && (newWord != null) && (prevWord.getFirst().equals(newWord.getFirst()))) {
+                while ((newWord != null) && (prevWord.getFirst().equals(newWord.getFirst()))) {
                     newWord = this.priorityQueue.poll();
                     postings.add(newWord.getSecond());
                     addNewLine(newWord.getThird());
                     newWord = this.priorityQueue.peek();
-                    int temp;
-                    temp = 4;
                 }
                 flushToFile(prevWord.getFirst(), postings, writer);
                 postings.clear();
-                filesToMerge.removeAll(this.filesCompletelyRead);
-                this.filesCompletelyRead.clear();
+//                filesToMerge.removeAll(this.filesCompletelyRead);
+//                this.filesCompletelyRead.clear();
             }
             if (this.filesEnded == totalNumOfFiles) break;
         }
         writer.close();
-        Task myTask = new Task(fileNameToWrite, new File(fileNameToWrite).length(), false);
-        GlobalVars.taskQueue.add(myTask);
-        for (File file : fileList) {
-            file.delete();
+//        Task myTask = new Task(fileNameToWrite, new File(fileNameToWrite).length(), false);
+        GlobalVars.fileMergerBuffer.add(writeFile);
+        for (File oldFiles : fileList) {
+            oldFiles.delete();
         }
         this.localFileCounter += 1;
     }
@@ -108,7 +93,7 @@ class MergerThread implements Runnable {
         newLineRead = fReader.readLine();
         if (newLineRead == null) {
             this.filesEnded += 1;
-            this.filesCompletelyRead.add(fReader);
+//            this.filesCompletelyRead.add(fReader);
         }
         else {
 
@@ -167,44 +152,23 @@ class MergerThread implements Runnable {
 
     @Override
     public void run() {
-        while (true) {
-            this.lock.lock();
-            Task myTask = new Task(this, true);
-            GlobalVars.taskQueue.add(myTask);
+        Boolean keepRunning = true;
+        while (keepRunning) {
+            File file;
+            while((file=GlobalVars.fileMergerBuffer.poll())!=null){
+                filesToMerge.add(file);
+            }
+            if(filesToMerge.size() == 1){
+                GlobalVars.fileMergerBuffer.add(filesToMerge.get(0));
+                return ;
+            }
+            if(filesToMerge.size()<GlobalVars.estimatedFilesToMerge) keepRunning = false;
             try {
-                this.cond.await();
-            }
-            catch (InterruptedException e) {
-                e.printStackTrace();
-                continue;
-            }
-            ArrayList<File> fileList = GlobalVars.fileMergerBuffer[this.tid].poll();
-            if (fileList == null) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                continue;
-            }
-            try {
-                mergeFiles(fileList);
+                mergeFiles(filesToMerge);
             }
             catch (Exception e) {
                 e.printStackTrace();
             }
-            this.lock.unlock();
         }
-    }
-}
-
-public class MyMerger {
-    public void start() {
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(GlobalVars.numOfMergerThreads);
-        for (int i = 0; i < GlobalVars.numOfMergerThreads; i++) {
-            MergerThread merger = new MergerThread(i);
-            executor.execute(merger);
-        }
-        executor.shutdown();
     }
 }

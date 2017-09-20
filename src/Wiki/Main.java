@@ -28,8 +28,8 @@ public class Main {
         myParser.start();
         MyIndexWriter myWriter = new MyIndexWriter();
         myWriter.start();
-        MyMerger myMerger = new MyMerger();
-        myMerger.start();
+//        MyMerger myMerger = new MyMerger();
+//        myMerger.start();
         ManageMergers myManager = new ManageMergers();
         myManager.start();
     }
@@ -44,7 +44,7 @@ public class Main {
         }
         GlobalVars.isParsingDone = false;
         GlobalVars.isMergingDone = false;
-        GlobalVars.taskQueue = new ConcurrentLinkedQueue<>();
+      //  GlobalVars.taskQueue = new ConcurrentLinkedQueue<>();
     }
 
     private static void initStopWords() throws Exception {
