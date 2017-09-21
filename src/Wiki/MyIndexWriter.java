@@ -3,7 +3,6 @@ package Wiki;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -37,13 +36,10 @@ class WriterThread implements Runnable {
         try {
             File file = new File(filePath);
             BufferedWriter writer = new BufferedWriter(new FileWriter(file));
-//            PrintWriter writer = new PrintWriter(filePath, "utf-8");
             writer.write(toWrite);
             writer.close();
             GlobalVars.fileMergerBuffer.add(file);
             this.numOfFileCreated++;
-//            Task  = new Task(filePath, new File(filePath).length(), false);
-//            GlobalVars.taskQueue.add(myTask);
         } catch (Exception e) {
             System.err.println("Error while writing file :(");
             e.printStackTrace();
@@ -66,8 +62,6 @@ class WriterThread implements Runnable {
             if (tempTask != null) {
                 if (tempTask.get("^end$") != null) {
                     GlobalVars.isParsingDone = true;
-//                    Task myTask = new Task("", 0, false, "writerDone");
-//                    GlobalVars.taskQueue.add(myTask);
                     GlobalVars.fileWritten[this.tid] =  numOfFileCreated;
                     System.out.println("Got end signal now ending");
                     return;
@@ -87,7 +81,6 @@ class WriterThread implements Runnable {
                 flushToFile(toWrite.toString());
                 this.docNum += 1;
             }
-//            else if (GlobalVars.isParsingDone) return;
             if (tempTask != null) tempTask.clear();
         }
     }

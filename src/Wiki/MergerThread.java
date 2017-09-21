@@ -12,25 +12,23 @@ class StringComparator implements Comparator<Tuple<String, String, BufferedReade
 }
 
 public class MergerThread extends Thread {
-    private ArrayList<File> filesToMerge = new ArrayList<>();
+    private ArrayList<File> listFilesToMerge;
     private int tid;
     private int slot;
     private String outputFolderPath;
     private int localFileCounter;
     private int fileDeleted;
     private PriorityQueue<Tuple<String, String, BufferedReader> > priorityQueue;
-    private int filesEnded;
-//    private ArrayList<BufferedReader> filesCompletelyRead = new ArrayList<>();
 
 
     MergerThread(int tid,int slot) {
+        this.listFilesToMerge = new ArrayList<>();
         this.tid = tid;
         this.slot = slot;
         this.fileDeleted =0;
         this.outputFolderPath = GlobalVars.tempOutputFolderPath + "/";
         this.localFileCounter = 0;
         this.priorityQueue = new PriorityQueue<>(2*GlobalVars.mergeFactor, new StringComparator());
-        this.filesEnded = 0;
     }
 
     public int getTid() {
@@ -39,6 +37,7 @@ public class MergerThread extends Thread {
 
 
     private void mergeFiles(ArrayList<File> fileList) throws Exception {
+        int filesEnded = 0;
         String fileNameToWrite = this.outputFolderPath + this.tid + "--" + this.localFileCounter;
         File writeFile = new File(fileNameToWrite);
         BufferedWriter writer = new BufferedWriter(new FileWriter(writeFile));
@@ -50,15 +49,7 @@ public class MergerThread extends Thread {
 
         int totalNumOfFiles = filesToMerge.size();
         for (int i=0; i<totalNumOfFiles; i++) {
-            String firstLine = filesToMerge.get(i).readLine();
-            if (firstLine == null) this.filesEnded += 1;
-            else {
-                String[] wordPosting = firstLine.split("=");
-                if (wordPosting.length < 2) {
-                    continue;
-                }
-                this.priorityQueue.add(new Tuple<>(wordPosting[0], wordPosting[1], filesToMerge.get(i)));
-            }
+            filesEnded += addNewLine(filesToMerge.get(i));
         }
 
         Tuple<String, String, BufferedReader> prevWord;
@@ -67,24 +58,21 @@ public class MergerThread extends Thread {
         while (true) {
             prevWord = this.priorityQueue.poll();
             if (prevWord != null) {
-                addNewLine(prevWord.getThird());
+                filesEnded += addNewLine(prevWord.getThird());
                 postings.add(prevWord.getSecond());
                 newWord = this.priorityQueue.peek();
                 while ((newWord != null) && (prevWord.getFirst().equals(newWord.getFirst()))) {
                     newWord = this.priorityQueue.poll();
                     postings.add(newWord.getSecond());
-                    addNewLine(newWord.getThird());
+                    filesEnded += addNewLine(newWord.getThird());
                     newWord = this.priorityQueue.peek();
                 }
                 flushToFile(prevWord.getFirst(), postings, writer);
                 postings.clear();
-//                filesToMerge.removeAll(this.filesCompletelyRead);
-//                this.filesCompletelyRead.clear();
             }
-            if (this.filesEnded == totalNumOfFiles) break;
+            if (filesEnded == totalNumOfFiles) break;
         }
         writer.close();
-//        Task myTask = new Task(fileNameToWrite, new File(fileNameToWrite).length(), false);
         GlobalVars.fileMergerBuffer.add(writeFile);
         for (File oldFiles : fileList) {
             oldFiles.delete();
@@ -92,22 +80,19 @@ public class MergerThread extends Thread {
         this.localFileCounter += 1;
     }
 
-    private void addNewLine(BufferedReader fReader) throws Exception {
-        String newLineRead;
-        newLineRead = fReader.readLine();
-        if (newLineRead == null) {
-            this.filesEnded += 1;
-//            this.filesCompletelyRead.add(fReader);
-        }
-        else {
-
+    private int addNewLine(BufferedReader fReader) throws Exception { ;
+        while(true){
+            String newLineRead = fReader.readLine();
+            if(newLineRead == null ) return 1;
             String[] line = newLineRead.split("=");
-            if (line.length < 2) return;
+            if (line.length < 2) continue;
             if (line.length == 2)
                 this.priorityQueue.add(new Tuple<>(line[0], line[1], fReader));
             else
                 this.priorityQueue.add(new Tuple<>(line[0] + line[1], line[2], fReader));
+            break;
         }
+        return 0;
     }
 
     private void flushToFile(String word, ArrayList<String> postings, BufferedWriter writer) throws Exception {
@@ -159,23 +144,25 @@ public class MergerThread extends Thread {
         Boolean keepRunning = true;
         while (keepRunning) {
             File file;
+            listFilesToMerge.clear();
             while ((file = GlobalVars.fileMergerBuffer.poll()) != null) {
-                filesToMerge.add(file);
+                listFilesToMerge.add(file);
             }
-            System.out.println(this.tid + " got: " + filesToMerge.size() + " files");
-            if (filesToMerge.size() == 0) break;
-            this.fileDeleted += filesToMerge.size() - 1;
-            if (filesToMerge.size() == 1) {
-                GlobalVars.fileMergerBuffer.add(filesToMerge.get(0));
+            System.out.println("thread " + this.tid + " got: " + listFilesToMerge.size() + " files");
+            if (listFilesToMerge.size() == 0) break;
+            this.fileDeleted += listFilesToMerge.size() - 1;
+            if (listFilesToMerge.size() == 1) {
+                GlobalVars.fileMergerBuffer.add(listFilesToMerge.get(0));
                 break;
             }
-            if (filesToMerge.size() < GlobalVars.estimatedFilesToMerge) keepRunning = false;
+            if (listFilesToMerge.size() < GlobalVars.estimatedFilesToMerge) keepRunning = false;
             try {
-                mergeFiles(filesToMerge);
+                mergeFiles(listFilesToMerge);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
+        System.out.println("Merge Done by thread"+ this.tid);
         GlobalVars.fileDeleted[slot] = this.fileDeleted;
     }
 }

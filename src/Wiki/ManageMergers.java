@@ -1,6 +1,5 @@
 package Wiki;
 
-import java.io.File;
 import java.util.*;
 
 
@@ -9,9 +8,10 @@ public class ManageMergers {
     private int numberOfFiles;
     private boolean writersDone;
     private int numOfThreadCreated;
+    private int startIter;
 
     private void checkWriter() {
-        if (writersDone) return;
+        if (this.writersDone) return;
         int numofWritersCompleted = 0;
         for (int i = 0; i < GlobalVars.numOfWriterThreads; i++) {
             if (GlobalVars.fileWritten[i] > 0) {
@@ -19,26 +19,27 @@ public class ManageMergers {
                 this.numberOfFiles += GlobalVars.fileWritten[i];
             }
         }
-        if (numofWritersCompleted == GlobalVars.numOfWriterThreads) writersDone = true;
+        if (numofWritersCompleted == GlobalVars.numOfWriterThreads) this.writersDone = true;
+        System.out.println("writers done is " + this.writersDone + " numOfFiles " + this.numberOfFiles);
     }
-
+    private void getReport() {
+        for (int i = 0; i < GlobalVars.Limit; i++) {
+            this.startIter = (this.startIter + 1) % GlobalVars.mergeSlots;
+            if (GlobalVars.fileDeleted[this.startIter] >= 0) {
+                this.numberOfFiles -= GlobalVars.fileDeleted[this.startIter];
+                GlobalVars.fileDeleted[this.startIter] = -1;
+                this.emptySlots.add(this.startIter);
+            }
+        }
+    }
     private int getSlot() {
+        getReport();
         if (this.emptySlots.isEmpty()) {
-            Boolean notGotAnyNewSlots = true;
-            while (notGotAnyNewSlots) {
-                for (int i = 0; i <= GlobalVars.mergeSlots; i++) {
-                    if (GlobalVars.fileDeleted[i] >= 0) {
-                        numberOfFiles -= GlobalVars.fileDeleted[i];
-                        GlobalVars.fileDeleted[i] = -1;
-                        this.emptySlots.add(i);
-                        notGotAnyNewSlots = false;
-                    }
-                }
-                try {
-                    Thread.sleep(GlobalVars.sleepTime);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            try {
+                Thread.sleep(GlobalVars.sleepTime);
+                return getSlot();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
         if (this.emptySlots.isEmpty()) {
@@ -46,12 +47,12 @@ public class ManageMergers {
             return 0;
         }
         return this.emptySlots.pollFirst();
-
     }
 
     ManageMergers() {
         this.emptySlots = new TreeSet<>();
         this.numberOfFiles = 0;
+        this.startIter = 0;
         this.writersDone = false;
         for (int i = 0; i < GlobalVars.mergeSlots; i++) {
             this.emptySlots.add(i);
@@ -62,14 +63,15 @@ public class ManageMergers {
 
     public void start() {
         while (!(this.writersDone && this.numberOfFiles <= 1)) {
+            System.out.println("Try next thread");
             //Task newTask = GlobalVars.taskQueue.poll();
             checkWriter();
             if (this.writersDone)
                 System.out.println("Number Of Files in The System " + this.numberOfFiles);
             int slot = getSlot();
-            System.out.println("thread " + numOfThreadCreated + "got Slot" + slot);
+            System.out.println("thread " + numOfThreadCreated + " got Slot" + slot);
             Thread mergerThread = new MergerThread(numOfThreadCreated, slot);
-            mergerThread.run();
+            mergerThread.start();
             numOfThreadCreated++;
             try {
                 Thread.sleep(GlobalVars.sleepTime);
@@ -77,5 +79,6 @@ public class ManageMergers {
                 e.printStackTrace();
             }
         }
+        System.out.println("Done");
     }
 }

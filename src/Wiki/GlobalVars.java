@@ -6,7 +6,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GlobalVars {
-    public static String xmlFileName = "/home/animesh/Downloads/wiki-search-small.xml";
+    public static String xmlFileName = "/home/animesh/Downloads/enwiki-latest-pages-articles-multistream.xml";
     public static String[] mainTags = {"title", "comment", "text", "general_doc"};
     public static String stopWordFile = "/home/animesh/IdeaProjects/wiki_search_engine/src/Wiki/StopWords.txt";
     public static int numOfReaderThreads = 1; // All these numbers should be same so there is a redundancy here.
@@ -28,7 +28,8 @@ public class GlobalVars {
     public static Stemmer myStemmer = new Stemmer(sizeOfMru);
     public static long sleepTime = 200000;
     public static int estimatedFilesToMerge = 1000;
-    public static int mergeSlots = 10000;
+    public static int mergeSlots = 1000;
+    public static int Limit = 600;
     public static volatile long [] fileDeleted = new long[mergeSlots];
 
 }
