@@ -15,11 +15,13 @@ class WriterThread implements Runnable {
     private Integer docNum;
     private String folderPath;
     private HashMap<String, String> tagToShortTag;
+    private int numOfFileCreated;
 
     WriterThread(Integer tid, String tempFolderPath) {
         this.tid = tid;
         this.docNum = 1;
         this.folderPath = tempFolderPath;
+        this.numOfFileCreated = 0;
         this.tagToShortTag = new HashMap<>();
         this.tagToShortTag.put("title", "t");
         this.tagToShortTag.put("infobox", "i");
@@ -39,6 +41,7 @@ class WriterThread implements Runnable {
             writer.write(toWrite);
             writer.close();
             GlobalVars.fileMergerBuffer.add(file);
+            this.numOfFileCreated++;
 //            Task  = new Task(filePath, new File(filePath).length(), false);
 //            GlobalVars.taskQueue.add(myTask);
         } catch (Exception e) {
@@ -65,6 +68,7 @@ class WriterThread implements Runnable {
                     GlobalVars.isParsingDone = true;
 //                    Task myTask = new Task("", 0, false, "writerDone");
 //                    GlobalVars.taskQueue.add(myTask);
+                    GlobalVars.fileWritten[this.tid] =  numOfFileCreated;
                     System.out.println("Got end signal now ending");
                     return;
                 }
@@ -83,7 +87,7 @@ class WriterThread implements Runnable {
                 flushToFile(toWrite.toString());
                 this.docNum += 1;
             }
-            else if (GlobalVars.isParsingDone) return;
+//            else if (GlobalVars.isParsingDone) return;
             if (tempTask != null) tempTask.clear();
         }
     }

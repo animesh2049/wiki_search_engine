@@ -1,64 +1,80 @@
 package Wiki;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.PriorityQueue;
+import java.util.*;
 
-class CustomComparator implements Comparator<Job> {
-
-    public int compare(Job t1, Job t2) {
-        if (t1.getFileSize() < t2.getFileSize()) return -1;
-        else if (t1.getFileSize() > t2.getFileSize()) return 1;
-        else {
-            if (t1.getFileName().compareTo(t2.getFileName()) < 0) return -1;
-            else if (t1.getFileName().compareTo(t2.getFileName()) > 0) return 1;
-            else return 0;
-        }
-    }
-}
 
 public class ManageMergers {
+    private TreeSet<Integer> emptySlots;
+    private int numberOfFiles;
+    private boolean writersDone;
+    private int numOfThreadCreated;
 
+    private void checkWriter() {
+        if (writersDone) return;
+        int numofWritersCompleted = 0;
+        for (int i = 0; i < GlobalVars.numOfWriterThreads; i++) {
+            if (GlobalVars.fileWritten[i] > 0) {
+                numofWritersCompleted += 1;
+                this.numberOfFiles += GlobalVars.fileWritten[i];
+            }
+        }
+        if (numofWritersCompleted == GlobalVars.numOfWriterThreads) writersDone = true;
+    }
 
-    public void start() {
-        while (true) {
-            //Task newTask = GlobalVars.taskQueue.poll();
-
-            Thread.sleep(GlobalVars.sleepTime);
-            if (newTask != null) {
-                if (newTask.getJobType()) {
-                    /*
-                     As files become bigger the merge factor should ideally reduce.
-                     */
-                    Job tempJob;
-                    ArrayList<File> filesToMerge = new ArrayList<>();
-                    for (int i=0; i < GlobalVars.mergeFactor; i++) {
-                        tempJob = this.jobQueue.poll();
-                        if (tempJob != null) {
-                            System.out.println(tempJob.getFileName() + " " + tempJob.getFileSize());
-                            filesToMerge.add(new File(tempJob.getFileName()));
-                        }
-                        else break;
+    private int getSlot() {
+        if (this.emptySlots.isEmpty()) {
+            Boolean notGotAnyNewSlots = true;
+            while (notGotAnyNewSlots) {
+                for (int i = 0; i <= GlobalVars.mergeSlots; i++) {
+                    if (GlobalVars.fileDeleted[i] >= 0) {
+                        numberOfFiles -= GlobalVars.fileDeleted[i];
+                        GlobalVars.fileDeleted[i] = -1;
+                        this.emptySlots.add(i);
+                        notGotAnyNewSlots = false;
                     }
-                    System.out.println("Done");
-                    if (filesToMerge.size() > 1) {
-                        GlobalVars.fileMergerBuffer[newTask.getTid()].add(filesToMerge);
-                    }
-                    filesToMerge.clear();
-                    newTask.getWhoSlept().getLock().lock();
-                    newTask.getWhoSlept().getCond().signal();
-                    newTask.getWhoSlept().getLock().unlock();
                 }
-                else {
-                    if (newTask.getSpecialInfo() != null) this.writerDone += 1;
-                    else {
-                        this.jobQueue.offer(new Job(newTask.getFileName(), newTask.getFileSize()));
-                    }
+                try {
+                    Thread.sleep(GlobalVars.sleepTime);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
-            else if (this.writerDone == GlobalVars.numOfWriterThreads) {
+        }
+        if (this.emptySlots.isEmpty()) {
+            System.out.println("Ye jaane kab ye hua kaise Hua");
+            return 0;
+        }
+        return this.emptySlots.pollFirst();
 
+    }
+
+    ManageMergers() {
+        this.emptySlots = new TreeSet<>();
+        this.numberOfFiles = 0;
+        this.writersDone = false;
+        for (int i = 0; i < GlobalVars.mergeSlots; i++) {
+            this.emptySlots.add(i);
+            GlobalVars.fileDeleted[i] = -1;
+        }
+
+    }
+
+    public void start() {
+        while (!(this.writersDone && this.numberOfFiles <= 1)) {
+            //Task newTask = GlobalVars.taskQueue.poll();
+            checkWriter();
+            if (this.writersDone)
+                System.out.println("Number Of Files in The System " + this.numberOfFiles);
+            int slot = getSlot();
+            System.out.println("thread " + numOfThreadCreated + "got Slot" + slot);
+            Thread mergerThread = new MergerThread(numOfThreadCreated, slot);
+            mergerThread.run();
+            numOfThreadCreated++;
+            try {
+                Thread.sleep(GlobalVars.sleepTime);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }

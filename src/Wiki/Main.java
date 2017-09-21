@@ -39,9 +39,8 @@ public class Main {
             GlobalVars.readerParserBuffer[i] = new ConcurrentLinkedQueue<>();
             GlobalVars.parserWriterBuffer[i] = new ConcurrentLinkedQueue<>();
         }
-        for (int i=0; i<GlobalVars.numOfMergerThreads; i++) {
-            GlobalVars.fileMergerBuffer[i] = new ConcurrentLinkedQueue<>();
-        }
+        GlobalVars.fileMergerBuffer = new ConcurrentLinkedQueue<>();
+
         GlobalVars.isParsingDone = false;
         GlobalVars.isMergingDone = false;
       //  GlobalVars.taskQueue = new ConcurrentLinkedQueue<>();

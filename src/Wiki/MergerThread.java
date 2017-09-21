@@ -13,29 +13,33 @@ class StringComparator implements Comparator<Tuple<String, String, BufferedReade
 
 public class MergerThread extends Thread {
     private ArrayList<File> filesToMerge = new ArrayList<>();
-    private String tid;
+    private int tid;
+    private int slot;
     private String outputFolderPath;
     private int localFileCounter;
+    private int fileDeleted;
     private PriorityQueue<Tuple<String, String, BufferedReader> > priorityQueue;
     private int filesEnded;
 //    private ArrayList<BufferedReader> filesCompletelyRead = new ArrayList<>();
 
 
-    MergerThread(String tid) {
+    MergerThread(int tid,int slot) {
         this.tid = tid;
+        this.slot = slot;
+        this.fileDeleted =0;
         this.outputFolderPath = GlobalVars.tempOutputFolderPath + "/";
         this.localFileCounter = 0;
         this.priorityQueue = new PriorityQueue<>(2*GlobalVars.mergeFactor, new StringComparator());
         this.filesEnded = 0;
     }
 
-    public String getTid() {
+    public int getTid() {
         return this.tid;
     }
 
 
     private void mergeFiles(ArrayList<File> fileList) throws Exception {
-        String fileNameToWrite = this.outputFolderPath + this.tid + "-" + this.localFileCounter;
+        String fileNameToWrite = this.outputFolderPath + this.tid + "--" + this.localFileCounter;
         File writeFile = new File(fileNameToWrite);
         BufferedWriter writer = new BufferedWriter(new FileWriter(writeFile));
 
@@ -155,20 +159,23 @@ public class MergerThread extends Thread {
         Boolean keepRunning = true;
         while (keepRunning) {
             File file;
-            while((file=GlobalVars.fileMergerBuffer.poll())!=null){
+            while ((file = GlobalVars.fileMergerBuffer.poll()) != null) {
                 filesToMerge.add(file);
             }
-            if(filesToMerge.size() == 1){
+            System.out.println(this.tid + " got: " + filesToMerge.size() + " files");
+            if (filesToMerge.size() == 0) break;
+            this.fileDeleted += filesToMerge.size() - 1;
+            if (filesToMerge.size() == 1) {
                 GlobalVars.fileMergerBuffer.add(filesToMerge.get(0));
-                return ;
+                break;
             }
-            if(filesToMerge.size()<GlobalVars.estimatedFilesToMerge) keepRunning = false;
+            if (filesToMerge.size() < GlobalVars.estimatedFilesToMerge) keepRunning = false;
             try {
                 mergeFiles(filesToMerge);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
+        GlobalVars.fileDeleted[slot] = this.fileDeleted;
     }
 }
