@@ -6,7 +6,8 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GlobalVars {
-    public static String xmlFileName = "/home/animesh/Downloads/enwiki-latest-pages-articles-multistream.xml";
+//    public static String xmlFileName = "/home/animesh/Downloads/enwiki-latest-pages-articles-multistream.xml";
+    public static String xmlFileName = "/home/animesh/Downloads/wiki-search-small.xml";
     public static String[] mainTags = {"title", "comment", "text", "general_doc"};
     public static String stopWordFile = "/home/animesh/IdeaProjects/wiki_search_engine/src/Wiki/StopWords.txt";
     public static int numOfReaderThreads = 1; // All these numbers should be same so there is a redundancy here.
@@ -23,13 +24,17 @@ public class GlobalVars {
     public static HashMap<String, Boolean> stopWords = new HashMap<>();
     public static int flushFactor = 50;
     public static int mergeFactor = 10;
-    public static String tempOutputFolderPath = "/tmp/tempoutput";
+    public static String tempOutputFolderPath = "/tmp/tempoutput/";
     public static int sizeOfMru = 10000;
     public static Stemmer myStemmer = new Stemmer(sizeOfMru);
-    public static long sleepTime = 200000;
-    public static int estimatedFilesToMerge = 1000;
-    public static int mergeSlots = 1000;
-    public static int Limit = 600;
+//    public static long sleepTime = 200000;
+    public static long sleepTime = 20000;
+//    public static int estimatedFilesToMerge = 700;
+    public static int estimatedFilesToMerge = 100;
+//    public static int mergeSlots = 1000;
+    public static int mergeSlots = 100;
+    public static int Limit = 500;
     public static volatile long [] fileDeleted = new long[mergeSlots];
+    public static String secIndexFile = "secIndex.txt";
 
 }

@@ -167,20 +167,23 @@ class ReaderThread implements Runnable {
         }
     }
 
-    private void parseExtra(String insideText) {
-        insideText = this.regexPattern.matcher(insideText).replaceAll(" ");
-        insideText = insideText.trim();
+    private void parseExtra(String insideTexts) {
+        String[] unProcessedTokens = insideTexts.split("\\s");
+        for (String insideText : unProcessedTokens) {
+            insideText = this.regexPattern.matcher(insideText).replaceAll(" ");
+            insideText = insideText.trim();
 
-        Matcher tempMatcher = this.extraPattern.matcher(insideText);
-        if (tempMatcher.find()) insideText = tempMatcher.group();
-        else return;
-        String[] words = insideText.split(" ");
-        for (String word : words) {
-            if (!word.isEmpty()) {
-                if (this.foundIdNum) {
-                    GlobalVars.readerParserBuffer[this.tid].add(new Tuple<>(this.docId, word, this.currTag));
-                } else {
-                    this.tempBuffer.add(new Pair<>(word, this.currTag));
+            Matcher tempMatcher = this.extraPattern.matcher(insideText);
+            if (tempMatcher.find()) insideText = tempMatcher.group();
+            else return;
+            String[] words = insideText.split(" ");
+            for (String word : words) {
+                if (!word.isEmpty()) {
+                    if (this.foundIdNum) {
+                        GlobalVars.readerParserBuffer[this.tid].add(new Tuple<>(this.docId, word, this.currTag));
+                    } else {
+                        this.tempBuffer.add(new Pair<>(word, this.currTag));
+                    }
                 }
             }
         }

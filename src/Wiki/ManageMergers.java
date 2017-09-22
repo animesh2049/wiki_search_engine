@@ -1,5 +1,6 @@
 package Wiki;
 
+import java.io.*;
 import java.util.*;
 
 
@@ -49,6 +50,60 @@ public class ManageMergers {
         return this.emptySlots.pollFirst();
     }
 
+    private void denseEncoding(){
+        String outDir = GlobalVars.tempOutputFolderPath;
+        File finalMergedFile;
+        while((finalMergedFile=GlobalVars.fileMergerBuffer.poll())==null);
+        String line = null;
+        ArrayList<String> denseIndex = new ArrayList<>();
+        try {
+
+            BufferedReader bufferedReader =
+                    new BufferedReader(new BufferedReader(new InputStreamReader(new FileInputStream(finalMergedFile))));
+
+            int cnt = 0;
+            int blockid = 1;
+            int breakpt = 10000;
+            Writer writer;
+            writer =(new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(outDir+String.valueOf(blockid)+".txt"), "utf-8")));
+
+
+            while ((line = bufferedReader.readLine()) != null) {
+                String[] tokens = line.split("=");
+                if(tokens.length==2) {
+                    if(line.length() > breakpt){
+                        continue;
+                    }
+                    writer.write(line + "\n");
+                    cnt = cnt + line.length();
+                    if (cnt > breakpt) {
+                        denseIndex.add(tokens[0]);
+                        blockid++;
+                        writer.close();
+                        writer = (new BufferedWriter(new OutputStreamWriter(
+                                new FileOutputStream(outDir + String.valueOf(blockid) + ".txt"), "utf-8")));
+                        cnt = 0;
+                    }
+                }
+            }
+            bufferedReader.close();
+            writer.close();
+            Writer tempWriter = (new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(GlobalVars.tempOutputFolderPath+GlobalVars.secIndexFile), "utf-8")));
+            for (String temp : denseIndex) {
+                tempWriter.write(temp+"\n");
+            }
+            tempWriter.close();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+
     ManageMergers() {
         this.emptySlots = new TreeSet<>();
         this.numberOfFiles = 0;
@@ -80,5 +135,6 @@ public class ManageMergers {
             }
         }
         System.out.println("Done");
+        denseEncoding();
     }
 }
